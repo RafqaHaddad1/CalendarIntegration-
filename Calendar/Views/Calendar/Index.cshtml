@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <script src='https://code.jquery.com/jquery-3.6.0.min.js'></script>
+</head>
+<body>
+    <h1>Calendar</h1>
+    <div id='calendar'></div>
+
+    <form id="eventForm">
+        <h2>Add or Update Event</h2>
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" required><br>
+
+        <label for="description">Description:</label>
+        <input type="text" id="description" name="description"><br>
+
+        <label for="start">Start Date and Time:</label>
+        <input type="datetime-local" id="start" name="start" required><br>
+
+        <label for="end">End Date and Time:</label>
+        <input type="datetime-local" id="end" name="end" required><br>
+
+        <label for="color">Color:</label>
+        <input type="color" id="color" name="color" value="#FF5733"><br>
+
+        <label for="allDay">All Day:</label>
+        <input type="checkbox" id="allDay" name="allDay"><br>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        $(document).ready(function () {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                editable: true,
+                dateClick: function (info) {
+                    calendar.changeView('timeGridDay', info.dateStr);
+                },
+                eventDrop: function (info) {
+                    updateEvent(info.event);
+                },
+                eventAdd: function (info) {
+                    saveEvent(info.event);
+                },
+                events: function (fetchInfo, successCallback, failureCallback) {
+                    $.ajax({
+                        url: '/Calendar/GetEvents',
+                        method: 'GET',
+                        success: function (data) {
+                            successCallback(data);
+                        },
+                        error: function () {
+                            failureCallback();
+                        }
+                    });
+                }
+            });
+
+            calendar.render();
+
+            $('#eventForm').on('submit', function (event) {
+                event.preventDefault();
+
+                var newEvent = {
+                    Subject: $('#title').val(),
+                    Description: $('#description').val(),
+                    Start: $('#start').val(),
+                    End: $('#end').val(),
+                    ThemeColor: $('#color').val(),
+                    IsFullDay: $('#allDay').is(':checked')
+                };
+
+                $.ajax({
+                    url: '/Calendar/AddEvent',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(newEvent),
+                    success: function () {
+                        alert('Event added successfully.');
+                        calendar.refetchEvents(); 
+                    },
+                    error: function () {
+                        alert('Failed to add event.');
+                    }
+                });
+            });
+
+            function saveEvent(event) {
+                $.ajax({
+                    url: '/Calendar/AddEvent',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        title: event.title,
+                        description: event.extendedProps.description,
+                        start: event.start.toISOString(),
+                        end: event.end.toISOString(),
+                        color: event.backgroundColor,
+                        allDay: event.allDay
+                    }),
+                    success: function () {
+                        alert('Event added successfully.');
+                    },
+                    error: function () {
+                        alert('Failed to add event.');
+                    }
+                });
+            }
+
+            function updateEvent(event) {
+                $.ajax({
+                    url: '/Calendar/UpdateEvent',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        id: event.id,
+                        title: event.title,
+                        description: event.extendedProps.description,
+                        start: event.start.toISOString(),
+                        end: event.end.toISOString(),
+                        color: event.backgroundColor,
+                        allDay: event.allDay
+                    }),
+                    success: function () {
+                        alert('Event updated successfully.');
+                    },
+                    error: function () {
+                        alert('Failed to update event.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
